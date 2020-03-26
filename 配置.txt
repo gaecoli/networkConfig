@@ -1,0 +1,478 @@
+﻿ISP配置：
+ISP(config)#interface f0/0
+
+ISP(config-if)#ip address 11.1.1.2 255.255.255.0
+
+ISP(config-if)#no shutdown
+
+ISP(config)#interface loopback 0
+
+ISP(config-if)#ip address 1.1.1.1 255.255.255.0
+
+COVERGE1配置：
+
+CORE(config)#interface f1/0
+
+
+CORE(config-if)#ip address 11.1.1.1 255.255.255.0
+
+
+CORE(config-if)#no shutdown
+
+
+CORE(config)#interface f0/0
+
+
+CORE(config-if)#ip address 172.16.1.1 255.255.255.0
+
+
+CORE(config-if)#no shutdown
+
+
+CORE(config-if)#ip summary-address eigrp 100 0.0.0.0 0.0.0.0                                ----下放缺省地址
+
+
+CORE(config)#interface f0/1
+
+
+CORE(config-if)#ip address 172.16.2.1 255.255.255.0
+
+
+CORE(config-if)#no shutdown
+
+
+CORE(config-if)#ip summary-address eigrp 100 0.0.0.0 0.0.0.0
+
+
+CORE(config)#ip route 0.0.0.0 0.0.0.0 f1/0                                                               ----写一个缺省地址指向外网
+
+CORE(config)#router eigrp 100                                                                                 ----起EIGTP协议
+
+CORE(config-router)#no auto-summary
+
+CORE(config-router)#network 172.16.1.0
+
+CORE(config-router)#network 172.16.2.0
+
+CORE(config)#interface f1/0                                                                                      ----定义内外网
+
+CORE(config-if)#ip nat outside
+
+CORE(config)#interface range f0/0-1
+
+CORE(config-if-range)#ip nat inside
+
+CORE(config)#ip nat pool wai 11.1.1.3 11.1.1.9 netmask 255.255.255.0                ----定义外网池子
+
+CORE(config)#access-list 1 permit 172.16.1.0 0.0.0.255                                         ----抓取感兴趣流量（所有需要访问外网的网段）
+
+CORE(config)#access-list 1 permit 172.16.2.0 0.0.0.255
+
+CORE(config)#access-list 1 permit 172.16.3.0 0.0.0.255
+
+CORE(config)#access-list 1 permit 172.16.4.0 0.0.0.255
+
+CORE(config)#access-list 1 permit 172.16.5.0 0.0.0.255
+
+CORE(config)#ip nat inside source list 1 pool wai                                                    ----将内网地址转换为地址池wai中的地址
+
+ 
+
+ 
+
+
+COVERGE1配置：
+
+COVERGE1(config)#ip routing                                                                                 ----打开三层交换机的路由功能
+
+COVERGE1(config)#interface f0/1
+
+COVERGE1(config-if)#no switchport                                                                        ----关闭该接口的交换功能
+
+COVERGE1(config-if)#ip address 172.16.1.2 255.255.255.0
+
+COVERGE1(config-if)#no shutdown
+
+COVERGE1(config)#interface range f0/2,f0/5-6
+
+COVERGE1(config-if-range)#switchport trunk encapsulation dot1q                         ----更改三层交换机接口的封装模式为dot1q
+
+COVERGE1(config-if-range)#switchport mode trunk                                                ----给该接口起TRUNK
+
+COVERGE1(config)#interface range f0/5-6
+
+COVERGE1(config-if-range)#no switchport
+
+COVERGE1(config-if-range)#channel-group 1 mode on                                          ----将f0/5-6逻辑整合为一个接口
+
+COVERGE1(config)#interface port-channel 1
+
+COVERGE1(config-if)#ip address 172.16.5.1 255.255.255.0                                  ----给逻辑接口channel 1 配IP地址
+
+COVERGE1(config-if)#no shutdown
+
+COVERGE1(config)#vlan 2                                                                                      ----起VLAN
+
+
+COVERGE1(config)#vlan 3
+
+COVERGE1(config)#interface f0/3                                                                          ----给接口划分VLAN
+
+
+COVERGE1(config-if)#switchport mode access
+
+
+COVERGE1(config-if)#switchport access vlan 2
+
+
+COVERGE1(config-if)#switchport trunk native vlan 2
+
+
+COVERGE1(config)#interface f0/4
+
+
+COVERGE1(config-if)#switchport mode access
+
+
+COVERGE1(config-if)#switchport access vlan 3
+
+
+COVERGE1(config-if)#switchport trunk native vlan 3
+
+
+COVERGE1(config)#interface vlan 2                                                                      ----给VLAN配物理网关                
+
+
+COVERGE1(config-if)#ip address 172.16.3.1 255.255.255.0
+
+
+COVERGE1(config-if)#no shutdown
+
+
+COVERGE1(config-if)#standby 1 ip 12.1.1.1                                                         ----给VLAN配逻辑网关
+
+
+COVERGE1(config-if)#standby 1 track f0/1                                                           ----做上行链路追踪
+
+
+COVERGE1(config)#interface vlan 3
+
+
+COVERGE1(config-if)#ip address 172.16.4.1 255.255.255.0
+
+
+COVERGE1(config-if)#no shutdown
+
+
+COVERGE1(config-if)#standby 2 ip 13.1.1.1
+
+
+COVERGE1(config-if)#standby 2 track f0/1
+
+
+COVERGE1(config)#spanning-tree vlan 2 root primary                                 ----定义COVERGE1为VLAN2的主根网桥
+
+
+COVERGE1(config)#spanning-tree vlan 3 root secondary                            ----定义COVERGE1为VLAN3的备份根网桥
+
+
+COVERGE1(config)#spanning-tree portfast default                                       ----全局开启端口加速（TRUNK干道无效）
+
+
+COVERGE1(config)#router eigrp 100                                                            ----起EIGRP协议
+
+
+COVERGE1(config-router)#no auto-summary
+
+
+COVERGE1(config-router)#network 172.16.1.0
+
+
+COVERGE1(config-router)#network 172.16.3.0
+
+
+COVERGE1(config-router)#network 172.16.4.0
+
+
+COVERGE1(config-router)#network 172.16.5.0
+
+
+COVERGE1(config-if)#ip summary-address eigrp 100 172.16.0.0 255.255.248.0        ----做汇总
+
+
+COVERGE1(config)#vtp domain ccnp                                                                           ----定义VTP的域
+
+
+COVERGE1(config)#vtp mode client                                                                             ----定义mode模式
+
+
+COVERGE1(config)#vtp password 123                                                                         ----设置VTP密码
+
+
+COVERGE1(config)#ip dhcp pool vlan2                                                                        ----做DHCP
+
+
+COVERGE1(dhcp-config)#network 172.16.3.0 255.255.255.0
+
+
+COVERGE1(dhcp-config)#default-router 12.1.1.1
+
+
+COVERGE1(dhcp-config)#dns-server 8.8.8.8
+
+
+COVERGE1(config)#ip dhcp pool vlan3
+
+
+COVERGE1(dhcp-config)#network 172.16.4.0 255.255.255.0
+
+
+COVERGE1(dhcp-config)#default-router 13.1.1.1
+
+
+COVERGE1(dhcp-config)#dns-server 8.8.8.8
+
+
+COVERGE1(config)#ip dhcp excluded-address 172.16.3.1 172.16.3.2
+
+
+COVERGE1(config)#ip dhcp excluded-address 172.16.4.1 172.16.4.2
+
+ 
+
+
+COVERGE2配置：
+
+COVERGE2(config)#ip routing
+
+
+COVERGE2(config)#interface f0/1
+
+
+COVERGE2(config-if)#no switchport
+
+
+COVERGE2(config-if)#ip address 172.16.2.2 255.255.255.0
+
+
+
+COVERGE2(config-if)#no shutdown
+
+
+COVERGE2(config)#interface range f0/2,f0/5-6
+
+
+COVERGE2(config-if-range)#switchport trunk encapsulation dot1q
+
+
+COVERGE2(config-if-range)#switchport mode trunk
+
+
+COVERGE2(config)#interface range f0/5-6
+
+
+COVERGE2(config-if-range)#no switchport
+
+
+COVERGE2(config-if-range)#channel-group 1 mode on
+
+
+COVERGE2(config)#interface port-channel 1
+
+
+COVERGE2(config-if)#ip address 172.16.5.2 255.255.255.0
+
+
+COVERGE2(config-if)#no shutdown
+
+COVERGE2(config)#vlan 2
+
+
+COVERGE2(config)#vlan 3
+
+COVERGE2(config)#interface f0/3
+
+
+COVERGE2(config-if)#switchport mode access
+
+
+COVERGE2(config-if)#switchport access vlan 2
+
+
+COVERGE2(config-if)#switchport trunk native vlan 2
+
+
+COVERGE2(config)#interface f0/4
+
+
+COVERGE2(config-if)#switchport mode access
+
+
+COVERGE2(config-if)#switchport access vlan 3
+
+
+COVERGE2(config-if)#switchport trunk native vlan 3
+
+
+COVERGE2(config)#interface vlan 2
+
+
+COVERGE2(config-if)#ip address 172.16.3.2 255.255.255.0
+
+
+COVERGE2(config-if)#no shutdown
+
+
+COVERGE2(config-if)#standby 1 ip 12.1.1.1
+
+
+COVERGE2(config-if)#standby 1 track f0/1
+
+
+COVERGE2(config)#interface vlan 3
+
+
+COVERGE2(config-if)#ip address 172.16.4.2 255.255.255.0
+
+
+COVERGE2(config-if)#no shutdown
+
+
+COVERGE2(config-if)#standby 2 ip 13.1.1.1
+
+
+COVERGE2(config-if)#standby 2 track f0/1
+
+
+COVERGE2(config)#spanning-tree vlan 3 root primary
+
+
+COVERGE2(config)#spanning-tree vlan 2 root secondary
+
+
+COVERGE2(config)#spanning-tree portfast default
+
+
+COVERGE2(config)#router eigrp 100
+
+
+COVERGE2(config-router)#no auto-summary
+
+
+COVERGE2(config-router)#network 172.16.2.0
+
+
+COVERGE2(config-router)#network 172.16.3.0
+
+
+COVERGE2(config-router)#network 172.16.4.0
+
+
+COVERGE2(config-router)#network 172.16.5.0
+
+
+COVERGE2(config-if)#ip summary-address eigrp 100 172.16.0.0 255.255.248.0
+
+
+COVERGE2(config)#vtp domain ccnp
+
+
+COVERGE2(config)#vtp mode client
+
+
+COVERGE2(config)#vtp password 123
+
+
+COVERGE2(config)#ip dhcp pool vlan2
+
+
+COVERGE2(dhcp-config)#network 172.16.3.0 255.255.255.0
+
+
+COVERGE2(dhcp-config)#default-router 12.1.1.1
+
+
+COVERGE2(dhcp-config)#dns-server 8.8.8.8
+
+
+COVERGE2(config)#ip dhcp pool vlan3
+
+
+COVERGE2(dhcp-config)#network 172.16.4.0 255.255.255.0
+
+
+COVERGE2(dhcp-config)#default-router 13.1.1.1
+
+
+COVERGE2(dhcp-config)#dns-server 8.8.8.8
+
+
+COVERGE2(config)#ip dhcp excluded-address 172.16.3.1 172.16.3.2
+
+
+COVERGE2(config)#ip dhcp excluded-address 172.16.4.1 172.16.4.2
+
+ 
+
+
+SW1配置：
+
+SW1(config)#vtp domain ccnp
+
+
+SW1(config)#vtp mode server
+
+
+SW1(config)#vtp password 123
+
+
+SW1(config)#interface range f0/1-2
+
+
+SW1(config-if-range)#switchport mode trunk
+
+
+SW1(config)#interface f0/3
+
+
+SW1(config-if)#switchport mode access
+
+
+SW1(config-if)#switchport access vlan 2
+
+
+SW1(config)#interface f0/4
+
+
+SW1(config-if)#switchport mode access
+
+
+SW1(config-if)#switchport access vlan 3
+
+ 
+
+
+
+SW2配置：
+
+SW2(config)#interface range f0/1-4
+
+
+SW2(config-if-range)#switchport mode access
+
+
+SW2(config-if-range)#switchport access vlan 2
+
+ 
+
+
+SW3配置：
+
+SW3(config)#interface range f0/1-4
+
+
+SW3(config-if-range)#switchport mode access
+
+
+SW3(config-if-range)#switchport access vlan 3
+
